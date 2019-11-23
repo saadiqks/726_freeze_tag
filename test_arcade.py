@@ -20,6 +20,11 @@ class FreezeTagGame(arcade.Window):
         self.wall_list = arcade.SpriteList()
         self.frozen_agents = arcade.SpriteList()
         self.toggled_agent = None
+        f = open("tagger_input.txt", "r")
+        self.commands = f.read().split(" \n")[:-1] # Reading commands from file
+        f.close()
+
+        self.index = 0
 
     def setup(self):
         # Creating tagger
@@ -80,14 +85,14 @@ class FreezeTagGame(arcade.Window):
         self.free_agents.draw()
 
     def on_key_press(self, key, modifiers):
-        if key == arcade.key.K:
-            self.tagger.change_y = MOVEMENT_SPEED
-        elif key == arcade.key.J:
-            self.tagger.change_y = -MOVEMENT_SPEED
-        elif key == arcade.key.H:
-            self.tagger.change_x = -MOVEMENT_SPEED
-        elif key == arcade.key.L:
-            self.tagger.change_x = MOVEMENT_SPEED
+#        if key == arcade.key.K:
+#            self.tagger.change_y = MOVEMENT_SPEED
+#        elif key == arcade.key.J:
+#            self.tagger.change_y = -MOVEMENT_SPEED
+#        elif key == arcade.key.H:
+#            self.tagger.change_x = -MOVEMENT_SPEED
+#        elif key == arcade.key.L:
+#            self.tagger.change_x = MOVEMENT_SPEED
 
         if TOGGLE_FREE_AGENT:
             if key == arcade.key.W:
@@ -100,10 +105,10 @@ class FreezeTagGame(arcade.Window):
                 self.toggled_agent.change_x = MOVEMENT_SPEED
 
     def on_key_release(self, key, modifiers):
-        if key == arcade.key.K or key == arcade.key.J:
-            self.tagger.change_y = 0
-        elif key == arcade.key.H or key == arcade.key.L:
-            self.tagger.change_x = 0
+#        if key == arcade.key.K or key == arcade.key.J:
+#            self.tagger.change_y = 0
+#        elif key == arcade.key.H or key == arcade.key.L:
+#            self.tagger.change_x = 0
 
         if TOGGLE_FREE_AGENT:
             if key == arcade.key.W or key == arcade.key.S:
@@ -132,10 +137,25 @@ class FreezeTagGame(arcade.Window):
                     if abs(x_pos - free_agent.center_x) < 50 and abs(y_pos - free_agent.center_y) < 50:
                         self.frozen_agents.remove(agent_to_unfreeze)
 
+    def move_tagger(self, x):
+        if x == "1":
+            self.tagger.center_y += MOVEMENT_SPEED
+        elif x == "2":
+            self.tagger.center_x += MOVEMENT_SPEED
+        elif x == "3":
+            self.tagger.center_y += -MOVEMENT_SPEED
+        elif x == "4":
+            self.tagger.center_x += -MOVEMENT_SPEED
+
     def update(self, delta_time):
+        """ Updates every frame of the game """
+        if self.index < len(self.commands):
+            self.move_tagger(self.commands[self.index])
+
         self.tagger_physics.update()
         self.check_freeze()
         self.check_unfreeze()
+        self.index = self.index + 1
 
         for free_agent in self.free_agents:
             if free_agent != self.toggled_agent:
