@@ -1,5 +1,6 @@
 import arcade
 import random
+import sys
 
 # Constants
 SCREEN_WIDTH = 1500
@@ -8,6 +9,9 @@ SCREEN_TITLE = "Freeze Tag"
 MOVEMENT_SPEED = 5
 FREE_AGENTS = 4
 TOGGLE_FREE_AGENT = False
+TIME_LIMIT = 20
+""" Reward: -1 if a tagger tags an agent, +1 if an agent is unfrozen, bonus at end for # of agents left alive """
+# Iterate through free agents for movement, abstract left, right, up, down
 
 class FreezeTagGame(arcade.Window):
     """ Main application class. """
@@ -25,6 +29,8 @@ class FreezeTagGame(arcade.Window):
         f.close()
 
         self.index = 0
+        self.reward = 0
+        self.model = None
 
     def setup(self):
         # Creating tagger
@@ -84,6 +90,19 @@ class FreezeTagGame(arcade.Window):
         self.tagger.draw()
         self.free_agents.draw()
 
+    # General movement methods
+    def move_left(self, agent):
+        agent.change_x = -MOVEMENT_SPEED
+
+    def move_right(self, agent):
+        agent.change_x = MOVEMENT_SPEED
+
+    def move_up(self, agent):
+        agent.change_y = MOVEMENT_SPEED
+
+    def move_down(self, agent):
+        agent.change_y = -MOVEMENT_SPEED
+
     def on_key_press(self, key, modifiers):
 #        if key == arcade.key.K:
 #            self.tagger.change_y = MOVEMENT_SPEED
@@ -124,6 +143,7 @@ class FreezeTagGame(arcade.Window):
 
         if abs(x_pos - self.tagger.center_x) < 50 and abs(y_pos - self.tagger.center_y) < 50:
             self.frozen_agents.append(agent_to_freeze)
+            self.reward -= 1
 
     def check_unfreeze(self):
         """ Checks if an unfrozen agent can 'rescue' a frozen agent """
@@ -136,6 +156,7 @@ class FreezeTagGame(arcade.Window):
 
                     if abs(x_pos - free_agent.center_x) < 50 and abs(y_pos - free_agent.center_y) < 50:
                         self.frozen_agents.remove(agent_to_unfreeze)
+                        self.reward += 1
 
     def move_tagger(self, x):
         if x == "1":
@@ -149,6 +170,16 @@ class FreezeTagGame(arcade.Window):
 
     def update(self, delta_time):
         """ Updates every frame of the game """
+
+        # Game is over
+        if self.index > TIME_LIMIT:
+            for agent in self.free_agents.sprite_list:
+                if agent not in self.frozen_agents.sprite_list:
+                    self.reward += 1
+
+            print("Final reward is", self.reward)
+            sys.exit()
+
         if self.index < len(self.commands):
             self.move_tagger(self.commands[self.index])
 
@@ -156,6 +187,14 @@ class FreezeTagGame(arcade.Window):
         self.check_freeze()
         self.check_unfreeze()
         self.index = self.index + 1
+
+        # Seems to be a bottleneck for rendering game
+        image = arcade.get_image()
+        curr_state = list(image.getdata()) # List of (R, G, B, S) states as input to model
+
+        self.model.input(curr_state)
+
+        actions = self.model.actions()
 
         for free_agent in self.free_agents:
             if free_agent != self.toggled_agent:
