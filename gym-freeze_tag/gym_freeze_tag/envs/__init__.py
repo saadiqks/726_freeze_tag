@@ -1,0 +1,1 @@
+from gym_freeze_tag.envs.freeze_tag_env import FreezeTagEnv
