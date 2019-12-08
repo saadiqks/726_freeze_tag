@@ -66,22 +66,23 @@ class FreezeTagEnv(gym.Env):
 
         observation = []
 
-#        for tagger in self.taggers:
-#            tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
-#            tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
-#            tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
+        for tagger in self.taggers:
+            tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
+            tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
+            tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
 
-#            observation.append((tagger_self_im, tagger_allies_im, tagger_enems_im))
+            observation.append((tagger_self_im, tagger_allies_im, tagger_enems_im))
 
-#        for free_agent in self.free_agents:
-#            free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
-#            free_agent_allies_im = self.get_images(self.viewer, free_agent, "free_agent", "allies")
-#            free_agent_enems_im = self.get_images(self.viewer, free_agent, "free_agent", "enems")
+        for free_agent in self.free_agents:
+            free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
+            free_agent_allies_im = self.get_images(self.viewer, free_agent, "free_agent", "allies")
+            free_agent_enems_im = self.get_images(self.viewer, free_agent, "free_agent", "enems")
 
-#            observation.append((free_agent_self_im, free_agent_allies_im, free_agent_enems_im))
+            observation.append((free_agent_self_im, free_agent_allies_im, free_agent_enems_im))
 
-#        plt.imsave(f"TAGGER_{int(tagger_x)}.png", observation[0][0])
-#        plt.imsave(f"FA_{int(first_agent_x)}.png", observation[1][0])
+#        plt.imsave(f"FA_1_SELF.png", observation[2][0])
+#        plt.imsave(f"FA_1_ALLIES.png", observation[2][1])
+#        plt.imsave(f"FA_1_ENEMS.png", observation[2][2])
 
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
         return state, reward, done, {}
