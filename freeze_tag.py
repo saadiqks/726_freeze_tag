@@ -1,11 +1,11 @@
 import gym
 
 env = gym.make('gym_freeze_tag:freeze_tag-v0')
-for i_episode in range(1):
+for i_episode in range(3):
     observation = env.reset()
-    for t in range(10):
+    for t in range(100):
         env.render()
-#        print(observation)
+        # print(observation)
         # action = env.action_space.sample()
         action = None
         observation, reward, done, _ = env.step(action)

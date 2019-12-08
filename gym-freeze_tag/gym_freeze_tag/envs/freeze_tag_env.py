@@ -6,8 +6,8 @@ from gym.utils import seeding
 import matplotlib.pyplot as plt
 from gym import error, spaces, utils
 
-TAGGERS = 1
-AGENTS = 1
+TAGGERS = 2
+AGENTS = 4
 SCREEN_DIM = 1000
 TIME_LIMIT = 1200 # 20 seconds
 
@@ -32,8 +32,10 @@ class FreezeTagEnv(gym.Env):
         self.viewer = None
         self.state = None
 
-        self.taggers = [None]
-        self.free_agents = [None]
+        self.taggers = [None] * TAGGERS
+        self.free_agents = [None] * AGENTS
+        self.tagger_trans = [None] * TAGGERS
+        self.free_agent_trans = [None] * AGENTS
 
         self.radius = 50 # radius of every agent and tagger
 
@@ -44,10 +46,6 @@ class FreezeTagEnv(gym.Env):
         return [seed]
 
     def step(self, action):
-        state = self.state
-
-        tagger_x, tagger_y, first_agent_x, first_agent_y = state
-
         # Tagger rewards come before agent rewards
         reward = [0] * (TAGGERS + AGENTS)
 
@@ -59,42 +57,38 @@ class FreezeTagEnv(gym.Env):
         for i in range(TAGGERS, TAGGERS + AGENTS):
             reward[i] = AGENTS - len(self.frozen_agents)
 
-        # Update x and y values for agents and tagger based on action
-        tagger_x += 1
-        tagger_y += 1
+        # Update x and y values for agents and taggers based on action
+        for i in range(len(self.state)):
+            self.state[i] += 1
 
-        first_agent_x += 1
-        first_agent_y += 1
-
-        self.state = (tagger_x, tagger_y, first_agent_x, first_agent_y)
-
+        state = self.state
         done = False
 
         observation = []
 
-        for tagger in self.taggers:
-            tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
-            tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
-            tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
+#        for tagger in self.taggers:
+#            tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
+#            tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
+#            tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
 
-            observation.append((tagger_self_im, tagger_allies_im, tagger_enems_im))
+#            observation.append((tagger_self_im, tagger_allies_im, tagger_enems_im))
 
-        for free_agent in self.free_agents:
-            free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
-            free_agent_allies_im = self.get_images(self.viewer, free_agent, "free_agent", "allies")
-            free_agent_enems_im = self.get_images(self.viewer, free_agent, "free_agent", "enems")
+#        for free_agent in self.free_agents:
+#            free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
+#            free_agent_allies_im = self.get_images(self.viewer, free_agent, "free_agent", "allies")
+#            free_agent_enems_im = self.get_images(self.viewer, free_agent, "free_agent", "enems")
 
-            observation.append((free_agent_self_im, free_agent_allies_im, free_agent_enems_im))
+#            observation.append((free_agent_self_im, free_agent_allies_im, free_agent_enems_im))
 
 #        plt.imsave(f"TAGGER_{int(tagger_x)}.png", observation[0][0])
 #        plt.imsave(f"FA_{int(first_agent_x)}.png", observation[1][0])
 
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
-        return observation, reward, done, {}
+        return state, reward, done, {}
 
     # For a given geom, returns self, allies or enemies image
     def get_images(self, viewer, geom, category, mode):
-        glClearColor(1,1,1,1)
+        glClearColor(1, 1, 1, 1)
         viewer.window.clear()
         viewer.window.switch_to()
         viewer.window.dispatch_events()
@@ -141,33 +135,35 @@ class FreezeTagEnv(gym.Env):
     def render(self, mode='human'):
         radius = self.radius
 
-        tagger_x, tagger_y, first_agent_x, first_agent_y = self.state
-
         # Render agents and tagger
         if self.viewer is None:
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(SCREEN_DIM, SCREEN_DIM)
 
-            self.taggers[0] = rendering.make_circle(radius)
-            self.free_agents[0] = rendering.make_circle(radius)
+            for i in range(TAGGERS):
+                self.taggers[i] = rendering.make_circle(radius)
+                self.taggers[i].set_color(0, 0, 0) # Tagger is black
+                self.viewer.add_geom(self.taggers[i])
 
-            self.taggers[0].set_color(0, 0, 0) # Tagger is black
-            self.free_agents[0].set_color(1, 0, 0) # Free agent is red
+                self.tagger_trans[i] = rendering.Transform()
+                self.taggers[i].add_attr(self.tagger_trans[i])
 
-            self.tagger_trans = rendering.Transform()
-            self.free_agent_trans = rendering.Transform()
+            for i in range(AGENTS):
+                self.free_agents[i] = rendering.make_circle(radius)
+                self.free_agents[i].set_color(1, 0, 0) # Free agent is red
+                self.viewer.add_geom(self.free_agents[i])
 
-            self.viewer.add_geom(self.taggers[0])
-            self.viewer.add_geom(self.free_agents[0])
-
-            self.taggers[0].add_attr(self.tagger_trans)
-            self.free_agents[0].add_attr(self.free_agent_trans)
+                self.free_agent_trans[i] = rendering.Transform()
+                self.free_agents[i].add_attr(self.free_agent_trans[i])
 
         if self.state is None:
             return None
 
-        self.tagger_trans.set_translation(tagger_x, tagger_y)
-        self.free_agent_trans.set_translation(first_agent_x, first_agent_y)
+        for i in range(TAGGERS):
+            self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
+
+        for i in range(TAGGERS, TAGGERS + AGENTS):
+            self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
