@@ -8,6 +8,7 @@ from gym import error, spaces, utils
 
 TAGGERS = 2
 AGENTS = 4
+MOVEMENT = 3
 SCREEN_DIM = 1000
 TIME_LIMIT = 1200 # 20 seconds
 
@@ -17,7 +18,7 @@ class FreezeTagEnv(gym.Env):
     def __init__(self):
         # (0, 1, 2, 3) = (UP, RIGHT, DOWN, LEFT)
         low = np.array([0] * (TAGGERS + AGENTS))
-        high = np.array([4] * (TAGGERS + AGENTS))
+        high = np.array([3] * (TAGGERS + AGENTS))
 
         self.action_space = spaces.Box(low, high, dtype=np.int32)
        # agent image ∈ [0, 255] × [0, 1000] × [0, 1000]
@@ -57,11 +58,23 @@ class FreezeTagEnv(gym.Env):
         for i in range(TAGGERS, TAGGERS + AGENTS):
             reward[i] = AGENTS - len(self.frozen_agents)
 
-        # Update x and y values for agents and taggers based on action
-        for i in range(len(self.state)):
-            self.state[i] += 1
-
         state = self.state
+
+        # Update x and y values for agents and taggers based on action
+        for i in range(0, len(state), 2):
+            j = i // 2
+
+            a = action[j]
+
+            if a == 0:
+                state[i + 1] += MOVEMENT # y coord increases 
+            elif a == 1:
+                state[i] += MOVEMENT # x coord increases 
+            elif a == 2:
+                state[i + 1] -= MOVEMENT # y coord decreases 
+            elif a == 3:
+                state[i] -= MOVEMENT # x coord decreases 
+
         done = False
 
         observation = []
@@ -71,21 +84,29 @@ class FreezeTagEnv(gym.Env):
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
             tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
 
-            observation.append((tagger_self_im, tagger_allies_im, tagger_enems_im))
+            gs_self = np.mean(tagger_self_im, -1)
+            gs_allies = np.mean(tagger_allies_im, -1)
+            gs_enems = np.mean(tagger_enems_im, -1)
+
+            observation.append((gs_self, gs_allies, gs_enems))
 
         for free_agent in self.free_agents:
             free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
             free_agent_allies_im = self.get_images(self.viewer, free_agent, "free_agent", "allies")
             free_agent_enems_im = self.get_images(self.viewer, free_agent, "free_agent", "enems")
 
-            observation.append((free_agent_self_im, free_agent_allies_im, free_agent_enems_im))
+            gs_self = np.mean(free_agent_self_im, -1)
+            gs_allies = np.mean(free_agent_allies_im, -1)
+            gs_enems = np.mean(free_agent_enems_im, -1)
 
-#        plt.imsave(f"FA_1_SELF.png", observation[2][0])
-#        plt.imsave(f"FA_1_ALLIES.png", observation[2][1])
-#        plt.imsave(f"FA_1_ENEMS.png", observation[2][2])
+            observation.append((gs_self, gs_allies, gs_enems))
+
+#        plt.imsave("FA_1_SELF.png", observation[2][0], cmap=plt.get_cmap('gray'))
+#        plt.imsave("FA_1_ALLIES.png", observation[2][1], cmap=plt.get_cmap('gray'))
+#        plt.imsave("FA_1_ENEMS.png", observation[2][2], cmap=plt.get_cmap('gray'))
 
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
-        return state, reward, done, {}
+        return observation, reward, done, {}
 
     # For a given geom, returns self, allies or enemies image
     def get_images(self, viewer, geom, category, mode):
@@ -151,7 +172,7 @@ class FreezeTagEnv(gym.Env):
 
             for i in range(AGENTS):
                 self.free_agents[i] = rendering.make_circle(radius)
-                self.free_agents[i].set_color(1, 0, 0) # Free agent is red
+                self.free_agents[i].set_color(0.8, 0.1, 0.1) # Free agent is red
                 self.viewer.add_geom(self.free_agents[i])
 
                 self.free_agent_trans[i] = rendering.Transform()

@@ -5,9 +5,8 @@ for i_episode in range(1):
     observation = env.reset()
     for t in range(100):
         env.render()
-        # print(observation)
-        # action = env.action_space.sample()
-        action = None
+        #print(observation)
+        action = env.action_space.sample()
         observation, reward, done, _ = env.step(action)
 
         if done:
