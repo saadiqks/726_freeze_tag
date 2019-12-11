@@ -13,15 +13,15 @@ import keras.backend as K
 from rl.agents.dqn import DQNAgent
 from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.memory import SequentialMemory
-from rl.core import Processor
+from rl.multi_core import MultiProcessor, MultiAgentFramework
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 
 
 INPUT_SHAPE = (84, 84)
 WINDOW_LENGTH = 4
 
-
-class AtariProcessor(Processor):
+# modified to use multiprocessor - processes multi agent step correctly
+class AtariProcessor(MultiProcessor):
     def process_observation(self, observation):
         assert observation.ndim == 3  # (height, width, channel)
         img = Image.fromarray(observation)
@@ -42,7 +42,8 @@ class AtariProcessor(Processor):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
-parser.add_argument('--env-name', type=str, default='BreakoutDeterministic-v4')
+# add freeze tag env name as default arg
+parser.add_argument('--env-name', type=str, default='insertFreezeTagEnvNameHere')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
@@ -95,10 +96,18 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # policy = BoltzmannQPolicy(tau=1.)
 # Feel free to give it a try!
 
-dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
+# creating both agents
+hider_dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
                processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
                train_interval=4, delta_clip=1.)
-dqn.compile(Adam(lr=.00025), metrics=['mae'])
+hider_dqn.compile(Adam(lr=.00025), metrics=['mae'])
+seeker_dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
+               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
+               train_interval=4, delta_clip=1.)
+seeker_dqn.compile(Adam(lr=.00025), metrics=['mae'])
+
+# passing both agents to framework
+framework = MultiAgentFramework(dqagents=[hider_dqn,seeker_dqn], processor=processor)
 
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
@@ -108,16 +117,16 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    dqn.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
+    framework.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
 
     # After training is done, we save the final weights one more time.
-    dqn.save_weights(weights_filename, overwrite=True)
+    framework.save_weights(weights_filename, overwrite=True)
 
-    # Finally, evaluate our algorithm for 10 episodes.
-    dqn.test(env, nb_episodes=10, visualize=False)
+    # Before executing test, copy changes made to fit() to ensure test() works in multi-agent setting
+    framework.test(env, nb_episodes=10, visualize=False)
 elif args.mode == 'test':
     weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
-    dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, visualize=True)
+    framework.load_weights(weights_filename)
+    framework.test(env, nb_episodes=10, visualize=True)

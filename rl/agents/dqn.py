@@ -213,8 +213,9 @@ class DQNAgent(AbstractDQNAgent):
         self.model.save_weights(filepath, overwrite=overwrite)
 
     def reset_states(self):
-        self.recent_action = None
-        self.recent_observation = None
+        # changed to lists to store all recent actions taken
+        self.recent_actions = []
+        self.recent_observations = []
         if self.compiled:
             self.model.reset_states()
             self.target_model.reset_states()
@@ -231,17 +232,22 @@ class DQNAgent(AbstractDQNAgent):
         else:
             action = self.test_policy.select_action(q_values=q_values)
 
-        # Book-keeping.
-        self.recent_observation = observation
-        self.recent_action = action
+        # append action, obs to recent_observations (because we are performing multiple actions before backward)
+        self.recent_observations.append(observation)
+        self.recent_actions.append(action)
 
         return action
 
     def backward(self, reward, terminal):
-        # Store most recent experience in memory.
-        if self.step % self.memory_interval == 0:
-            self.memory.append(self.recent_observation, self.recent_action, reward, terminal,
+        # Store most recent experiences in memory.
+        for i,recent_observation in enumerate(self.recent_observations)
+            if self.step % self.memory_interval == 0:
+                self.memory.append(recent_observation, self.recent_actions[i], reward, terminal,
                                training=self.training)
+
+        # empty action , observation cache
+        self.recent_observations = []
+        self.recent_actions = []
 
         metrics = [np.nan for _ in self.metrics_names]
         if not self.training:
