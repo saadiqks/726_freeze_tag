@@ -48,18 +48,9 @@ class FreezeTagEnv(gym.Env):
         return [seed]
 
     def step(self, action):
-        # Tagger rewards come before agent rewards
-        reward = [0] * (TAGGERS + AGENTS)
-
-        # Calculating reward for taggers
-        for i in range(TAGGERS):
-            reward[i] = random.random()
-#            reward[i] = len(self.frozen_agents)
-
-        # Calculating reward for agents
-        for i in range(TAGGERS, TAGGERS + AGENTS):
-            reward[i] = random.random()
-#            reward[i] = AGENTS - len(self.frozen_agents)
+        # Prey reward comes before predator reward
+        # Rewards will be aggregated per team later
+        reward = [random.random(), random.random()]
 
         state = self.state
 
