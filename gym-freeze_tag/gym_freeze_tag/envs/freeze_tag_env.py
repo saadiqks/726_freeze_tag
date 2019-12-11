@@ -18,10 +18,8 @@ class FreezeTagEnv(gym.Env):
 
     def __init__(self):
         # (0, 1, 2, 3) = (UP, RIGHT, DOWN, LEFT)
-        low = np.array([0] * (TAGGERS + AGENTS))
-        high = np.array([3] * (TAGGERS + AGENTS))
+        self.action_space = spaces.Discrete(4)
 
-        self.action_space = spaces.Box(low, high, dtype=np.int32)
        # agent image ∈ [0, 255] × [0, 1000] × [0, 1000]
        # agent observation is (self image, allies image, enemies image)
 
