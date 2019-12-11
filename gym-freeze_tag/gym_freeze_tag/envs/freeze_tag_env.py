@@ -1,5 +1,6 @@
 import gym
 import pyglet
+import random
 import numpy as np
 from pyglet.gl import *
 from gym.utils import seeding
@@ -52,11 +53,13 @@ class FreezeTagEnv(gym.Env):
 
         # Calculating reward for taggers
         for i in range(TAGGERS):
-            reward[i] = len(self.frozen_agents)
+            reward[i] = random.random()
+#            reward[i] = len(self.frozen_agents)
 
         # Calculating reward for agents
         for i in range(TAGGERS, TAGGERS + AGENTS):
-            reward[i] = AGENTS - len(self.frozen_agents)
+            reward[i] = random.random()
+#            reward[i] = AGENTS - len(self.frozen_agents)
 
         state = self.state
 
