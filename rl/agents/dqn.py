@@ -245,10 +245,6 @@ class DQNAgent(AbstractDQNAgent):
                 self.memory.append(recent_observation, self.recent_actions[i], reward, terminal,
                                training=self.training)
 
-        # empty action , observation cache
-        self.recent_observations = []
-        self.recent_actions = []
-
         metrics = [np.nan for _ in self.metrics_names]
         if not self.training:
             # We're done here. No need to update the experience memory since we only use the working
@@ -594,8 +590,8 @@ class NAFAgent(AbstractDQNAgent):
     def reset_states(self):
         if self.random_process is not None:
             self.random_process.reset_states()
-        self.recent_action = None
-        self.recent_observation = None
+        self.recent_actions = []
+        self.recent_observations = []
         if self.compiled:
             self.combined_model.reset_states()
             self.target_V_model.reset_states()

@@ -85,10 +85,11 @@ class MultiAgentFramework(object):
                 if observations == []:  # start of a new episode
                     callbacks.on_episode_begin(episode)
                     episode_step = np.int16(0)
-                    episode_reward = np.float32(0)
+                    episode_reward = np.float32([0,0])
 
                     # Obtain the initial observation by resetting the environment.
-                    self.reset_states()
+                    self.dqagent[0].reset_states()
+                    self.dqagent[1].reset_states()
                     observations = deepcopy(env.reset())
                     if self.processor is not None:
                         # process all observations
@@ -137,15 +138,15 @@ class MultiAgentFramework(object):
 
                 # given incides [0,3] are hider indices and [4,5] are seeker indices
                 actions = []
-                for i in range(0,4):
+                for i in range(2,6):
                     actions.append(self.dqagents[0].forward(observations[i]))
-                for i in range(4,6):
+                for i in range(0,2):
                     actions.append(self.dqagents[1].forward(observations[i]))
 
                 # process all actions
                 if self.processor is not None:
                     actions = [self.processor.process_action(action) for action in actions]
-                reward = np.float32(0)
+                rewards = np.float32([0,0])
                 accumulated_info = {}
                 done = False
                 for _ in range(action_repetition):
@@ -165,6 +166,7 @@ class MultiAgentFramework(object):
                     callbacks.on_action_end(actions)
                     hider_reward += rs[0]
                     seeker_reward += rs[1]
+                    rewards += rs
                     if done:
                         break
                 if nb_max_episode_steps and episode_step >= nb_max_episode_steps - 1:
@@ -174,15 +176,15 @@ class MultiAgentFramework(object):
                 # run backwrd step wrt each agent's respective aggregate reward
                 hider_metrics = self.dqagents[0].backward(hider_reward, terminal=done)
                 seeker_metrics = self.dqagents[1].backward(seeker_reward, terminal=done)
-                episode_reward += reward
+                episode_reward += rewards
 
                 step_logs = {
-                    'action': actions,
-                    'observation': observations,
+                    'actions': actions,
+                    'observations': observations,
                     'hider_reward': hider_reward,
+                    'hider_metrics': hider_metrics,
                     'seeker_reward': seeker_reward,
                     'seeker_metrics': seeker_metrics,
-                    'hider_metrics': hider_metrics,
                     'episode': episode,
                     'info': accumulated_info,
                 }
@@ -196,9 +198,9 @@ class MultiAgentFramework(object):
                     # resetting the environment. We need to pass in `terminal=False` here since
                     # the *next* state, that is the state of the newly reset environment, is
                     # always non-terminal by convention.
-                    for i in range(0,4):
+                    for i in range(2,6):
                         self.dqagents[0].forward(observations[i])
-                    for i in range(4,6):
+                    for i in range(0,2):
                         self.dqagents[1].forward(observations[i])
 
                     self.dqagents[0].backward(0., terminal=False)
@@ -293,18 +295,21 @@ class MultiAgentFramework(object):
         callbacks.on_train_begin()
         for episode in range(nb_episodes):
             callbacks.on_episode_begin(episode)
-            episode_reward = 0
+            episode_reward = [0,0]
             episode_step = 0
 
             # Obtain the initial observation by resetting the environment.
-            self.reset_states()
-            observation = deepcopy(env.reset())
+            self.dqagent[0].reset_states()
+            self.dqagent[1].reset_states()
+            observations = deepcopy(env.reset())
             if self.processor is not None:
-                observation = self.processor.process_observation(observation)
-            assert observation is not None
+                observations = [self.processor.process_observation(observation) for observation in observations]
+            assert observations != []
 
             # Perform random starts at beginning of episode and do not record them into the experience.
             # This slightly changes the start position between games.
+
+            # this is never executed with default args.
             nb_random_start_steps = 0 if nb_max_start_steps == 0 else np.random.randint(
                 nb_max_start_steps)
             for _ in range(nb_random_start_steps):
@@ -315,8 +320,8 @@ class MultiAgentFramework(object):
                 if self.processor is not None:
                     action = self.processor.process_action(action)
                 callbacks.on_action_begin(action)
-                observation, r, done, info = env.step(action)
-                observation = deepcopy(observation)
+                observations, rs, done, info = env.step(action)
+                observations = deepcopy(observations)
                 if self.processor is not None:
                     observation, r, done, info = self.processor.process_step(
                         observation, r, done, info)
@@ -335,20 +340,27 @@ class MultiAgentFramework(object):
             while not done:
                 callbacks.on_step_begin(episode_step)
 
-                action = self.forward(observation)
+                actions = []
+                for i in range(2,6):
+                    actions.append(self.dqagents[0].forward(observations[i]))
+                for i in range(0,2):
+                    actions.append(self.dqagents[1].forward(observations[i]))
+
                 if self.processor is not None:
-                    action = self.processor.process_action(action)
-                reward = 0.
+                    actions = [self.processor.process_action(action) for action in actions]
+                rewards = [0.,0.]
                 accumulated_info = {}
                 for _ in range(action_repetition):
                     callbacks.on_action_begin(action)
-                    observation, r, d, info = env.step(action)
-                    observation = deepcopy(observation)
+                    observations, rs, d, info = env.step(actions)
+                    observations = deepcopy(observations)
                     if self.processor is not None:
-                        observation, r, d, info = self.processor.process_step(
-                            observation, r, d, info)
-                    callbacks.on_action_end(action)
-                    reward += r
+                        observations, rs, d, info = self.processor.process_step(
+                            observations, rs, d, info)
+                    callbacks.on_action_end(actions)
+                    hider_reward += rs[0]
+                    seeker_reward += rs[1]
+                    rewards += rs
                     for key, value in info.items():
                         if not np.isreal(value):
                             continue
@@ -360,13 +372,14 @@ class MultiAgentFramework(object):
                         break
                 if nb_max_episode_steps and episode_step >= nb_max_episode_steps - 1:
                     done = True
-                self.backward(reward, terminal=done)
-                episode_reward += reward
+                self.dqagent[0].backward(hider_reward, terminal=done)
+                self.dqagent[1].backward(seeker_reward, terminal=done)
+                episode_reward += rewards
 
                 step_logs = {
-                    'action': action,
-                    'observation': observation,
-                    'reward': reward,
+                    'action': actions,
+                    'observation': observations,
+                    'rewards': rewards,
                     'episode': episode,
                     'info': accumulated_info,
                 }
@@ -379,8 +392,13 @@ class MultiAgentFramework(object):
             # resetting the environment. We need to pass in `terminal=False` here since
             # the *next* state, that is the state of the newly reset environment, is
             # always non-terminal by convention.
-            self.forward(observation)
-            self.backward(0., terminal=False)
+            for i in range(2,6):
+                self.dqagent[0].forward(observations[i])
+            for i in range(0,2):
+                self.dqagent[1].forward(observations[i])
+
+            self.dqagent[0].backward(0., terminal=False)
+            self.dqagent[1].backward(0., terminal=False)
 
             # Report end of episode.
             episode_logs = {
