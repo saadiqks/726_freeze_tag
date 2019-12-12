@@ -16,7 +16,6 @@ from rl.memory import SequentialMemory
 from multi_core import MultiProcessor, MultiAgentFramework
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 
-
 INPUT_SHAPE = (84, 84)
 WINDOW_LENGTH = 4
 

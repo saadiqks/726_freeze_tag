@@ -12,9 +12,8 @@ TAGGERS = 2
 AGENTS = 4
 MOVEMENT = 3
 SCREEN_DIM = 1000
-TIME_LIMIT = 1200 # 20 seconds
 
-# TODO: write freezing logic
+# TODO: remove CNNs in dqn_atari.py and do not scale down images in processor that file, just return observation 
 class FreezeTagEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -40,10 +39,10 @@ class FreezeTagEnv(gym.Env):
         self.free_agents = [None] * AGENTS
         self.tagger_trans = [None] * TAGGERS
         self.free_agent_trans = [None] * AGENTS
+        self.frozen_agents = [0] * AGENTS
 
         self.radius = 50 # radius of every agent and tagger
 
-        self.frozen_agents = []
         radius = self.radius
 
         # Render agents and tagger
@@ -70,35 +69,53 @@ class FreezeTagEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def collision(self, x_1, y_1, x_2, y_2):
+        z_1 = np.array([x_1, y_1])
+        z_2 = np.array([x_2, y_2])
+
+        return np.linalg.norm(z_1 - z_2) <= 2 * self.radius
+
     def step(self, action):
         # Prey rewards come before predator rewards
         # Compute aggregate rewards for each category
-        reward = [random.random(), random.random()]
-
-        # Calculating reward for taggers
-#        for i in range(TAGGERS):
-#            reward[i] = len(self.frozen_agents)
-
-        # Calculating reward for agents
-#        for i in range(TAGGERS, TAGGERS + AGENTS):
-#            reward[i] = AGENTS - len(self.frozen_agents)
+        reward = [0, 0]
 
         state = self.state
+
+        # Calculating reward for taggers
+        for i in range(TAGGERS):
+            # Check if tagger froze any free agent and that the agent is currently unfrozen
+            for j in range(AGENTS):
+                if self.collision(state[2 * i], state[2 * i + 1], state[2 * (TAGGERS + j)], state[2 * (TAGGERS + j) + 1]) and not self.frozen_agents[j]:
+                    self.frozen_agents[j] = 1
+                    reward[1] += 1
+                    reward[0] -= 1
+
+        # Calculating reward for agents
+        for i in range(TAGGERS, TAGGERS + AGENTS):
+            # Check if any free agent unfroze any of its frozen brethren 
+            for j in range(AGENTS):
+                if i != TAGGERS + j:
+                    if self.collision(state[2 * i], state[2 * i + 1], state[2 * (TAGGERS + j)], state[2 * (TAGGERS + j) + 1]) and self.frozen_agents[j]:
+                        self.frozen_agents[j] = 0
+                        reward[0] += 1
+                        reward[1] -= 1
 
         # Update x and y values for agents and taggers based on action
         for i in range(0, len(state), 2):
             j = i // 2
 
-            a = action[j]
+            if j < 2 or not self.frozen_agents[j - 2]: # Ensures frozen agents do not move
+                a = action[j]
 
-            if a == 0:
-                state[i + 1] += MOVEMENT # y coord increases 
-            elif a == 1:
-                state[i] += MOVEMENT # x coord increases 
-            elif a == 2:
-                state[i + 1] -= MOVEMENT # y coord decreases 
-            elif a == 3:
-                state[i] -= MOVEMENT # x coord decreases 
+                if a == 0:
+                    state[i + 1] += MOVEMENT # y coord increases 
+                elif a == 1:
+                    state[i] += MOVEMENT # x coord increases 
+                elif a == 2:
+                    state[i + 1] -= MOVEMENT # y coord decreases 
+                elif a == 3:
+                    state[i] -= MOVEMENT # x coord decreases 
 
         done = False
 
@@ -110,6 +127,7 @@ class FreezeTagEnv(gym.Env):
         for i in range(TAGGERS, TAGGERS + AGENTS):
             self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
+        """
         for tagger in self.taggers:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
@@ -131,12 +149,14 @@ class FreezeTagEnv(gym.Env):
             gs_enems = np.mean(free_agent_enems_im, -1)
 
             observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
+        """
 
         self.observation = observation
+        self.state = state
 
-
-        # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
-        return self.observation, reward, done, {}
+        self.frozen_agents = [0] * AGENTS
+        # returning 12 length state array and other stuff
+        return self.state, reward, done, {}
 
     # For a given geom, returns self, allies or enemies image
     def get_images(self, viewer, geom, category, mode):
@@ -189,6 +209,7 @@ class FreezeTagEnv(gym.Env):
         for i in range(TAGGERS, TAGGERS + AGENTS):
             self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
+        """
         for tagger in self.taggers:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
@@ -210,10 +231,10 @@ class FreezeTagEnv(gym.Env):
             gs_enems = np.mean(free_agent_enems_im, -1)
 
             observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
-
+        """
         self.observation = observation
 
-        return self.observation
+        return self.state
 
     def render(self, mode='human'):
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
