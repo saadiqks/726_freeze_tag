@@ -128,7 +128,7 @@ class FreezeTagEnv(gym.Env):
 
         self.observation = observation
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
-        return observation, reward, done, {}
+        return self.observation, reward, done, {}
 
     # For a given geom, returns self, allies or enemies image
     def get_images(self, viewer, geom, category, mode):
