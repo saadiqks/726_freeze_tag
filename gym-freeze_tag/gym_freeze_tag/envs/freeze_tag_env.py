@@ -113,7 +113,7 @@ class FreezeTagEnv(gym.Env):
             gs_allies = np.mean(tagger_allies_im, -1)
             gs_enems = np.mean(tagger_enems_im, -1)
 
-            observation.append(np.dstack((tagger_self_im, tagger_allies_im, tagger_enems_im)))
+            observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
 
         for free_agent in self.free_agents:
             free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
@@ -124,7 +124,7 @@ class FreezeTagEnv(gym.Env):
             gs_allies = np.mean(free_agent_allies_im, -1)
             gs_enems = np.mean(free_agent_enems_im, -1)
 
-            observation.append(np.dstack((free_agent_self_im, free_agent_allies_im, free_agent_enems_im)))
+            observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
 
         self.observation = observation
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
