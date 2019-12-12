@@ -24,7 +24,7 @@ WINDOW_LENGTH = 4
 class AtariProcessor(MultiProcessor):
     def process_observation(self, observation):
         assert observation.ndim == 3  # (height, width, channel)
-        img = Image.fromarray(observation)
+        img = Image.fromarray(observation.astype('uint8'))
         img = img.resize(INPUT_SHAPE).convert('L')  # resize and convert to grayscale
         processed_observation = np.array(img)
         assert processed_observation.shape == INPUT_SHAPE
@@ -116,7 +116,7 @@ if args.mode == 'train':
     checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
-    callbacks += [FileLogger(log_filename, interval=100)]
+    #callbacks += [FileLogger(log_filename, interval=100)]
     framework.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
 
     # After training is done, we save the final weights one more time.
