@@ -6,6 +6,7 @@ from pyglet.gl import *
 from gym.utils import seeding
 import matplotlib.pyplot as plt
 from gym import error, spaces, utils
+from gym.envs.classic_control import rendering
 
 TAGGERS = 2
 AGENTS = 4
@@ -13,6 +14,7 @@ MOVEMENT = 3
 SCREEN_DIM = 1000
 TIME_LIMIT = 1200 # 20 seconds
 
+# TODO: write freezing logic
 class FreezeTagEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -42,6 +44,27 @@ class FreezeTagEnv(gym.Env):
         self.radius = 50 # radius of every agent and tagger
 
         self.frozen_agents = []
+        radius = self.radius
+
+        # Render agents and tagger
+        if self.viewer is None:
+            self.viewer = rendering.Viewer(SCREEN_DIM, SCREEN_DIM)
+
+            for i in range(TAGGERS):
+                self.taggers[i] = rendering.make_circle(radius)
+                self.taggers[i].set_color(0, 0, 0) # Tagger is black
+                self.viewer.add_geom(self.taggers[i])
+
+                self.tagger_trans[i] = rendering.Transform()
+                self.taggers[i].add_attr(self.tagger_trans[i])
+
+            for i in range(AGENTS):
+                self.free_agents[i] = rendering.make_circle(radius)
+                self.free_agents[i].set_color(0.8, 0.1, 0.1) # Free agent is red
+                self.viewer.add_geom(self.free_agents[i])
+
+                self.free_agent_trans[i] = rendering.Transform()
+                self.free_agents[i].add_attr(self.free_agent_trans[i])
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -103,10 +126,6 @@ class FreezeTagEnv(gym.Env):
 
             observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
 
-#        plt.imsave("FA_1_SELF.png", observation[2][0], cmap=plt.get_cmap('gray'))
-#        plt.imsave("FA_1_ALLIES.png", observation[2][1], cmap=plt.get_cmap('gray'))
-#        plt.imsave("FA_1_ENEMS.png", observation[2][2], cmap=plt.get_cmap('gray'))
-
         self.observation = observation
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
         return observation, reward, done, {}
@@ -154,42 +173,35 @@ class FreezeTagEnv(gym.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * AGENTS + 2 * TAGGERS),)
+        observation = []
 
-        self.observation = self.observation_space.sample()
+        for tagger in self.taggers:
+            tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
+            tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
+            tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
 
-        # Grayscaling each image in each 3-tuple of the initial observation and calling np.dstack on every 3-tuple
-        for i in range(TAGGERS + AGENTS):
-            self.observation[i][0] = np.mean(self.observation[i][0], -1)
-            self.observation[i][1] = np.mean(self.observation[i][1], -1)
-            self.observation[i][2] = np.mean(self.observation[i][2], -1)
+            gs_self = np.mean(tagger_self_im, -1)
+            gs_allies = np.mean(tagger_allies_im, -1)
+            gs_enems = np.mean(tagger_enems_im, -1)
 
-            self.observation[i] = np.dstack((self.observation[i][0], self.observation[i][1], self.observation[i][2]))
+            observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
+
+        for free_agent in self.free_agents:
+            free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
+            free_agent_allies_im = self.get_images(self.viewer, free_agent, "free_agent", "allies")
+            free_agent_enems_im = self.get_images(self.viewer, free_agent, "free_agent", "enems")
+
+            gs_self = np.mean(free_agent_self_im, -1)
+            gs_allies = np.mean(free_agent_allies_im, -1)
+            gs_enems = np.mean(free_agent_enems_im, -1)
+
+            observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
+
+        self.observation = observation
 
         return self.observation
 
     def render(self, mode='human'):
-        radius = self.radius
-
-        # Render agents and tagger
-        if self.viewer is None:
-            from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(SCREEN_DIM, SCREEN_DIM)
-
-            for i in range(TAGGERS):
-                self.taggers[i] = rendering.make_circle(radius)
-                self.taggers[i].set_color(0, 0, 0) # Tagger is black
-                self.viewer.add_geom(self.taggers[i])
-
-                self.tagger_trans[i] = rendering.Transform()
-                self.taggers[i].add_attr(self.tagger_trans[i])
-
-            for i in range(AGENTS):
-                self.free_agents[i] = rendering.make_circle(radius)
-                self.free_agents[i].set_color(0.8, 0.1, 0.1) # Free agent is red
-                self.viewer.add_geom(self.free_agents[i])
-
-                self.free_agent_trans[i] = rendering.Transform()
-                self.free_agents[i].add_attr(self.free_agent_trans[i])
 
         if self.state is None:
             return None
