@@ -13,7 +13,7 @@ import keras.backend as K
 from rl.agents.dqn import DQNAgent
 from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.memory import SequentialMemory
-from rl.multi_core import MultiProcessor, MultiAgentFramework
+from multi_core import MultiProcessor, MultiAgentFramework
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 
 
@@ -43,7 +43,7 @@ class AtariProcessor(MultiProcessor):
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
 # add freeze tag env name as default arg
-parser.add_argument('--env-name', type=str, default='insertFreezeTagEnvNameHere')
+parser.add_argument('--env-name', type=str, default='gym_freeze_tag:freeze_tag-v0')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
