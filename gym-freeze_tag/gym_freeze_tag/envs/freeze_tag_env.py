@@ -18,6 +18,7 @@ class FreezeTagEnv(gym.Env):
 
     def __init__(self):
         # (0, 1, 2, 3) = (UP, RIGHT, DOWN, LEFT)
+
         self.action_space = spaces.Discrete(4)
 
        # agent image ∈ [0, 255] × [0, 1000] × [0, 1000]
@@ -31,6 +32,7 @@ class FreezeTagEnv(gym.Env):
         self.seed()
         self.viewer = None
         self.state = None
+        self.observation = None
 
         self.taggers = [None] * TAGGERS
         self.free_agents = [None] * AGENTS
@@ -46,9 +48,17 @@ class FreezeTagEnv(gym.Env):
         return [seed]
 
     def step(self, action):
-        # Prey reward comes before predator reward
-        # Rewards will be aggregated per team later
+        # Prey rewards come before predator rewards
+        # Compute aggregate rewards for each category
         reward = [random.random(), random.random()]
+
+        # Calculating reward for taggers
+#        for i in range(TAGGERS):
+#            reward[i] = len(self.frozen_agents)
+
+        # Calculating reward for agents
+#        for i in range(TAGGERS, TAGGERS + AGENTS):
+#            reward[i] = AGENTS - len(self.frozen_agents)
 
         state = self.state
 
@@ -80,7 +90,7 @@ class FreezeTagEnv(gym.Env):
             gs_allies = np.mean(tagger_allies_im, -1)
             gs_enems = np.mean(tagger_enems_im, -1)
 
-            observation.append((gs_self, gs_allies, gs_enems))
+            observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
 
         for free_agent in self.free_agents:
             free_agent_self_im = self.get_images(self.viewer, free_agent, "free_agent", "self")
@@ -91,12 +101,13 @@ class FreezeTagEnv(gym.Env):
             gs_allies = np.mean(free_agent_allies_im, -1)
             gs_enems = np.mean(free_agent_enems_im, -1)
 
-            observation.append((gs_self, gs_allies, gs_enems))
+            observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
 
 #        plt.imsave("FA_1_SELF.png", observation[2][0], cmap=plt.get_cmap('gray'))
 #        plt.imsave("FA_1_ALLIES.png", observation[2][1], cmap=plt.get_cmap('gray'))
 #        plt.imsave("FA_1_ENEMS.png", observation[2][2], cmap=plt.get_cmap('gray'))
 
+        self.observation = observation
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
         return observation, reward, done, {}
 
@@ -144,7 +155,17 @@ class FreezeTagEnv(gym.Env):
     def reset(self):
         self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * AGENTS + 2 * TAGGERS),)
 
-        return np.array(self.state)
+        self.observation = self.observation_space.sample()
+
+        # Grayscaling each image in each 3-tuple of the initial observation and calling np.dstack on every 3-tuple
+        for i in range(TAGGERS + AGENTS):
+            self.observation[i][0] = np.mean(self.observation[i][0], -1)
+            self.observation[i][1] = np.mean(self.observation[i][1], -1)
+            self.observation[i][2] = np.mean(self.observation[i][2], -1)
+
+            self.observation[i] = np.dstack((self.observation[i][0], self.observation[i][1], self.observation[i][2]))
+
+        return self.observation
 
     def render(self, mode='human'):
         radius = self.radius
