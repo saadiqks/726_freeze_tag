@@ -1,7 +1,7 @@
 import gym
 
 env = gym.make('gym_freeze_tag:freeze_tag-v0')
-for i_episode in range(1):
+for i_episode in range(3):
     observation = env.reset()
     for t in range(5):
         env.render()

@@ -104,6 +104,12 @@ class FreezeTagEnv(gym.Env):
 
         observation = []
 
+        for i in range(TAGGERS):
+            self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
+
+        for i in range(TAGGERS, TAGGERS + AGENTS):
+            self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
+
         for tagger in self.taggers:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
@@ -127,6 +133,8 @@ class FreezeTagEnv(gym.Env):
             observation.append(np.dstack((gs_self, gs_allies, gs_enems)))
 
         self.observation = observation
+
+
         # observation is a list of 3-tuples, where each 3-tuple contains a self, allies, and enemies image 
         return self.observation, reward, done, {}
 
@@ -175,6 +183,12 @@ class FreezeTagEnv(gym.Env):
         self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * AGENTS + 2 * TAGGERS),)
         observation = []
 
+        for i in range(TAGGERS):
+            self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
+
+        for i in range(TAGGERS, TAGGERS + AGENTS):
+            self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
+
         for tagger in self.taggers:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
@@ -202,16 +216,6 @@ class FreezeTagEnv(gym.Env):
         return self.observation
 
     def render(self, mode='human'):
-
-        if self.state is None:
-            return None
-
-        for i in range(TAGGERS):
-            self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
-
-        for i in range(TAGGERS, TAGGERS + AGENTS):
-            self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
-
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
     def close(self):
