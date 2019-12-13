@@ -12,6 +12,7 @@ PREDS = 2
 PREY = 4
 MOVEMENT = 3
 SCREEN_DIM = 1000
+STEPS_LIMIT = 10000
 
 class FreezeTagEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -33,6 +34,7 @@ class FreezeTagEnv(gym.Env):
         self.viewer = None
         self.state = None
         self.observation = None
+        self.counter = 0
 
         self.taggers = [None] * PREDS
         self.free_agents = [None] * PREY
@@ -177,6 +179,12 @@ class FreezeTagEnv(gym.Env):
 
         self.frozen_agents = [0] * PREY
         # returning 12 length state array and other stuff
+
+        self.counter += 1
+
+        if self.counter > STEPS_LIMIT:
+            done = True
+
         return self.observation, reward, done, {}
 
     # For a given geom, returns self, allies or enemies image
@@ -221,6 +229,7 @@ class FreezeTagEnv(gym.Env):
         return arr
 
     def reset(self):
+        self.counter = 0
         self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * PREY + 2 * PREDS),)
         observation = []
 
