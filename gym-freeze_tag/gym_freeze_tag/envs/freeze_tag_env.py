@@ -267,7 +267,7 @@ class FreezeTagEnv(gym.Env):
         """
         self.observation = observation
 
-        return self.state
+        return self.observation
 
     def render(self, mode='human'):
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
