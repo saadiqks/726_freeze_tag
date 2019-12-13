@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from gym import error, spaces, utils
 from gym.envs.classic_control import rendering
 
-TAGGERS = 2
-AGENTS = 4
+PREDS = 2
+PREY = 4
 MOVEMENT = 3
 SCREEN_DIM = 1000
 
@@ -24,8 +24,8 @@ class FreezeTagEnv(gym.Env):
        # agent image ∈ [0, 255] × [0, 1000] × [0, 1000]
        # agent observation is (self image, allies image, enemies image)
 
-        low = np.array([[(0, 0, 0)] * 3] * (TAGGERS + AGENTS))
-        high = np.array([[(255, 1000, 1000)] * 3] * (TAGGERS + AGENTS))
+        low = np.array([[(0, 0, 0)] * 3] * (PREDS + PREY))
+        high = np.array([[(255, 1000, 1000)] * 3] * (PREDS + PREY))
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
@@ -34,11 +34,11 @@ class FreezeTagEnv(gym.Env):
         self.state = None
         self.observation = None
 
-        self.taggers = [None] * TAGGERS
-        self.free_agents = [None] * AGENTS
-        self.tagger_trans = [None] * TAGGERS
-        self.free_agent_trans = [None] * AGENTS
-        self.frozen_agents = [0] * AGENTS
+        self.taggers = [None] * PREDS
+        self.free_agents = [None] * PREY
+        self.tagger_trans = [None] * PREDS
+        self.free_agent_trans = [None] * PREY
+        self.frozen_agents = [0] * PREY
 
         self.radius = 50 # radius of every agent and tagger
 
@@ -48,17 +48,17 @@ class FreezeTagEnv(gym.Env):
         if self.viewer is None:
             self.viewer = rendering.Viewer(SCREEN_DIM, SCREEN_DIM)
 
-            for i in range(TAGGERS):
+            for i in range(PREDS):
                 self.taggers[i] = rendering.make_circle(radius)
-                self.taggers[i].set_color(0, 0, 0) # Tagger is black
+                self.taggers[i].set_color(0, 0, 0) # Predator is black
                 self.viewer.add_geom(self.taggers[i])
 
                 self.tagger_trans[i] = rendering.Transform()
                 self.taggers[i].add_attr(self.tagger_trans[i])
 
-            for i in range(AGENTS):
+            for i in range(PREY):
                 self.free_agents[i] = rendering.make_circle(radius)
-                self.free_agents[i].set_color(0.8, 0.1, 0.1) # Free agent is red
+                self.free_agents[i].set_color(0.8, 0.1, 0.1) # Prey is red
                 self.viewer.add_geom(self.free_agents[i])
 
                 self.free_agent_trans[i] = rendering.Transform()
@@ -81,24 +81,29 @@ class FreezeTagEnv(gym.Env):
 
         state = self.state
 
-        # Calculating reward for taggers
-        for i in range(TAGGERS):
+        # Calculating reward for taggers, penalizing them if they leave screen
+        for i in range(PREDS):
             # Check if tagger froze any free agent and that the agent is currently unfrozen
-            for j in range(AGENTS):
-                if self.collision(state[2 * i], state[2 * i + 1], state[2 * (TAGGERS + j)], state[2 * (TAGGERS + j) + 1]) and not self.frozen_agents[j]:
+            for j in range(PREY):
+                if self.collision(state[2 * i], state[2 * i + 1], state[2 * (PREDS + j)], state[2 * (PREDS + j) + 1]) and not self.frozen_agents[j]:
                     self.frozen_agents[j] = 1
                     reward[1] += 1
                     reward[0] -= 1
+            # Penalizing for leaving screen
+            if state[2 * i] < 0 or state[2 * i] > 1000 or state[2 * i + 1] < 0 or state[2 * i + 1] > 1000:
+                reward[1] -= 1000
 
-        # Calculating reward for agents
-        for i in range(TAGGERS, TAGGERS + AGENTS):
+        # Calculating reward for agents, penalizing them if they leave screen
+        for i in range(PREDS, PREDS + PREY):
             # Check if any free agent unfroze any of its frozen brethren 
-            for j in range(AGENTS):
-                if i != TAGGERS + j:
-                    if self.collision(state[2 * i], state[2 * i + 1], state[2 * (TAGGERS + j)], state[2 * (TAGGERS + j) + 1]) and self.frozen_agents[j]:
+            for j in range(PREY):
+                if i != PREDS + j:
+                    if self.collision(state[2 * i], state[2 * i + 1], state[2 * (PREDS + j)], state[2 * (PREDS + j) + 1]) and self.frozen_agents[j]:
                         self.frozen_agents[j] = 0
                         reward[0] += 1
                         reward[1] -= 1
+            if state[2 * i] < 0 or state[2 * i] > 1000 or state[2 * i + 1] < 0 or state[2 * i + 1] > 1000:
+                reward[0] -= 1000
 
         # Update x and y values for agents and taggers based on action
         for i in range(0, len(state), 2):
@@ -120,11 +125,11 @@ class FreezeTagEnv(gym.Env):
 
         observation = []
 
-        for i in range(TAGGERS):
+        for i in range(PREDS):
             self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
-        for i in range(TAGGERS, TAGGERS + AGENTS):
-            self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
+        for i in range(PREDS, PREDS + PREY):
+            self.free_agent_trans[i - PREDS].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
         prey_1 = [self.state[0], self.state[1], self.frozen_agents[0]]
         prey_2 = [self.state[2], self.state[3], self.frozen_agents[1]]
@@ -170,7 +175,7 @@ class FreezeTagEnv(gym.Env):
         self.observation = observation
         self.state = state
 
-        self.frozen_agents = [0] * AGENTS
+        self.frozen_agents = [0] * PREY
         # returning 12 length state array and other stuff
         return self.observation, reward, done, {}
 
@@ -216,14 +221,14 @@ class FreezeTagEnv(gym.Env):
         return arr
 
     def reset(self):
-        self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * AGENTS + 2 * TAGGERS),)
+        self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * PREY + 2 * PREDS),)
         observation = []
 
-        for i in range(TAGGERS):
+        for i in range(PREDS):
             self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
-        for i in range(TAGGERS, TAGGERS + AGENTS):
-            self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
+        for i in range(PREDS, PREDS + PREY):
+            self.free_agent_trans[i - PREDS].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
         prey_1 = [self.state[0], self.state[1], self.frozen_agents[0]]
         prey_2 = [self.state[2], self.state[3], self.frozen_agents[1]]
