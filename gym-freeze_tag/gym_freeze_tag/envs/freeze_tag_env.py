@@ -36,7 +36,7 @@ class FreezeTagEnv(gym.Env):
         self.observation = None
         self.counter = 0
 
-        self.taggers = [None] * PREDS
+        self.predators = [None] * PREDS
         self.free_agents = [None] * PREY
         self.tagger_trans = [None] * PREDS
         self.free_agent_trans = [None] * PREY
@@ -51,12 +51,12 @@ class FreezeTagEnv(gym.Env):
             self.viewer = rendering.Viewer(SCREEN_DIM, SCREEN_DIM)
 
             for i in range(PREDS):
-                self.taggers[i] = rendering.make_circle(radius)
-                self.taggers[i].set_color(0, 0, 0) # Predator is black
-                self.viewer.add_geom(self.taggers[i])
+                self.predators[i] = rendering.make_circle(radius)
+                self.predators[i].set_color(0, 0, 0) # Predator is black
+                self.viewer.add_geom(self.predators[i])
 
                 self.tagger_trans[i] = rendering.Transform()
-                self.taggers[i].add_attr(self.tagger_trans[i])
+                self.predators[i].add_attr(self.tagger_trans[i])
 
             for i in range(PREY):
                 self.free_agents[i] = rendering.make_circle(radius)
@@ -83,7 +83,7 @@ class FreezeTagEnv(gym.Env):
 
         state = self.state
 
-        # Calculating reward for taggers, penalizing them if they leave screen
+        # Calculating reward for predators, penalizing them if they leave screen
         for i in range(PREDS):
             # Check if tagger froze any free agent and that the agent is currently unfrozen
             for j in range(PREY):
@@ -107,7 +107,7 @@ class FreezeTagEnv(gym.Env):
             if state[2 * i] < 0 or state[2 * i] > 1000 or state[2 * i + 1] < 0 or state[2 * i + 1] > 1000:
                 reward[0] -= 1000
 
-        # Update x and y values for agents and taggers based on action
+        # Update x and y values for agents and predators based on action
         for i in range(0, len(state), 2):
             j = i // 2
 
@@ -151,7 +151,7 @@ class FreezeTagEnv(gym.Env):
         observation.append([pred_2 + pred_1 + prey_1 + prey_2 + prey_3 + prey_4][0])
 
         """
-        for tagger in self.taggers:
+        for tagger in self.predators:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
             tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
@@ -177,9 +177,6 @@ class FreezeTagEnv(gym.Env):
         self.observation = observation
         self.state = state
 
-        self.frozen_agents = [0] * PREY
-        # returning 12 length state array and other stuff
-
         self.counter += 1
 
         if self.counter > STEPS_LIMIT:
@@ -199,7 +196,7 @@ class FreezeTagEnv(gym.Env):
             if mode == "self":
                 geom.render()
             elif mode == "allies":
-                for tagger in self.taggers:
+                for tagger in self.predators:
                     if tagger != geom:
                         tagger.render()
             elif mode == "enems":
@@ -214,7 +211,7 @@ class FreezeTagEnv(gym.Env):
                     if fa != geom:
                         fa.render()
             elif mode == "enems":
-                for tagger in self.taggers:
+                for tagger in self.predators:
                     tagger.render()
 
         viewer.transform.disable()
@@ -232,6 +229,8 @@ class FreezeTagEnv(gym.Env):
         self.counter = 0
         self.state = self.np_random.uniform(0, SCREEN_DIM, size=(2 * PREY + 2 * PREDS),)
         observation = []
+
+        self.frozen_agents = [0] * PREY
 
         for i in range(PREDS):
             self.tagger_trans[i].set_translation(self.state[2 * i], self.state[2 * i + 1])
@@ -257,7 +256,7 @@ class FreezeTagEnv(gym.Env):
         observation.append([pred_2 + pred_1 + prey_1 + prey_2 + prey_3 + prey_4][0])
 
         """
-        for tagger in self.taggers:
+        for tagger in self.predators:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
             tagger_allies_im = self.get_images(self.viewer, tagger, "tagger", "allies")
             tagger_enems_im = self.get_images(self.viewer, tagger, "tagger", "enems")
