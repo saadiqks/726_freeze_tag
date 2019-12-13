@@ -13,7 +13,6 @@ AGENTS = 4
 MOVEMENT = 3
 SCREEN_DIM = 1000
 
-# TODO: remove CNNs in dqn_atari.py and do not scale down images in processor that file, just return observation 
 class FreezeTagEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -127,6 +126,23 @@ class FreezeTagEnv(gym.Env):
         for i in range(TAGGERS, TAGGERS + AGENTS):
             self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
 
+        prey_1 = [self.state[0], self.state[1], self.frozen_agents[0]]
+        prey_2 = [self.state[2], self.state[3], self.frozen_agents[1]]
+        prey_3 = [self.state[4], self.state[5], self.frozen_agents[2]]
+        prey_4 = [self.state[6], self.state[7], self.frozen_agents[3]]
+        pred_1 = [self.state[8], self.state[9], 0]
+        pred_2 = [self.state[10], self.state[11], 0]
+
+        # [self, other prey, predators]
+        observation.append([prey_1 + prey_2 + prey_3 + prey_4 + pred_1 + pred_2][0])
+        observation.append([prey_2 + prey_3 + prey_4 + prey_1 + pred_1 + pred_2][0])
+        observation.append([prey_3 + prey_4 + prey_1 + prey_2 + pred_1 + pred_2][0])
+        observation.append([prey_4 + prey_1 + prey_2 + prey_3 + pred_1 + pred_2][0])
+
+        # [self, other pred, prey]
+        observation.append([pred_1 + pred_2 + prey_1 + prey_2 + prey_3 + prey_4][0])
+        observation.append([pred_2 + pred_1 + prey_1 + prey_2 + prey_3 + prey_4][0])
+
         """
         for tagger in self.taggers:
             tagger_self_im = self.get_images(self.viewer, tagger, "tagger", "self")
@@ -156,7 +172,7 @@ class FreezeTagEnv(gym.Env):
 
         self.frozen_agents = [0] * AGENTS
         # returning 12 length state array and other stuff
-        return self.state, reward, done, {}
+        return self.observation, reward, done, {}
 
     # For a given geom, returns self, allies or enemies image
     def get_images(self, viewer, geom, category, mode):
@@ -208,6 +224,23 @@ class FreezeTagEnv(gym.Env):
 
         for i in range(TAGGERS, TAGGERS + AGENTS):
             self.free_agent_trans[i - TAGGERS].set_translation(self.state[2 * i], self.state[2 * i + 1])
+
+        prey_1 = [self.state[0], self.state[1], self.frozen_agents[0]]
+        prey_2 = [self.state[2], self.state[3], self.frozen_agents[1]]
+        prey_3 = [self.state[4], self.state[5], self.frozen_agents[2]]
+        prey_4 = [self.state[6], self.state[7], self.frozen_agents[3]]
+        pred_1 = [self.state[8], self.state[9], 0]
+        pred_2 = [self.state[10], self.state[11], 0]
+
+        # [self, other prey, predators]
+        observation.append([prey_1 + prey_2 + prey_3 + prey_4 + pred_1 + pred_2][0])
+        observation.append([prey_2 + prey_3 + prey_4 + prey_1 + pred_1 + pred_2][0])
+        observation.append([prey_3 + prey_4 + prey_1 + prey_2 + pred_1 + pred_2][0])
+        observation.append([prey_4 + prey_1 + prey_2 + prey_3 + pred_1 + pred_2][0])
+
+        # [self, other pred, prey]
+        observation.append([pred_1 + pred_2 + prey_1 + prey_2 + prey_3 + prey_4][0])
+        observation.append([pred_2 + pred_1 + prey_1 + prey_2 + prey_3 + prey_4][0])
 
         """
         for tagger in self.taggers:
