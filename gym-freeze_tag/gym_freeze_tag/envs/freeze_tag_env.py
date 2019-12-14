@@ -190,6 +190,8 @@ class FreezeTagEnv(gym.Env):
         self.counter += 1
 
         if self.counter > STEPS_LIMIT:
+            reward[0] = 4 - sum(self.frozen_agents)
+            reward[1] = sum(self.frozen_agents)
             done = True
 
         return self.observation, reward, done, {}
