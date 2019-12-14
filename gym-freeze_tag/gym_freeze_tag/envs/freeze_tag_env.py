@@ -12,7 +12,7 @@ PREDS = 2
 PREY = 4
 MOVEMENT = 3
 SCREEN_DIM = 1000
-STEPS_LIMIT = 10000
+STEPS_LIMIT = 2000
 
 class FreezeTagEnv(gym.Env):
     metadata = {'render.modes': ['human']}
