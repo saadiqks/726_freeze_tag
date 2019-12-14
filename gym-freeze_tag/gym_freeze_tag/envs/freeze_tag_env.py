@@ -95,7 +95,7 @@ class FreezeTagEnv(gym.Env):
                     reward[0] -= 1
             # Penalizing for leaving screen
             if state[2 * i] < 0 or state[2 * i] > 1000 or state[2 * i + 1] < 0 or state[2 * i + 1] > 1000:
-                reward[1] -= self.penalty
+                reward[1] = self.penalty
 
         # Calculating reward for agents, penalizing them if they leave screen
         for i in range(PREDS, PREDS + PREY):
@@ -107,7 +107,7 @@ class FreezeTagEnv(gym.Env):
                         reward[0] += 1
                         reward[1] -= 1
             if state[2 * i] < 0 or state[2 * i] > 1000 or state[2 * i + 1] < 0 or state[2 * i + 1] > 1000:
-                reward[0] -= self.penalty
+                reward[0] = self.penalty
 
         # Update x and y values for agents and predators based on action
         for i in range(0, len(state), 2):
@@ -183,8 +183,6 @@ class FreezeTagEnv(gym.Env):
 
         if self.counter > STEPS_LIMIT:
             done = True
-
-        self.penalty *= 10
 
         return self.observation, reward, done, {}
 
