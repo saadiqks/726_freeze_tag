@@ -2,7 +2,7 @@ import gym
 import pyglet
 import random
 import numpy as np
-from pyglet.gl import *
+#from pyglet.gl import *
 from gym.utils import seeding
 import matplotlib.pyplot as plt
 from gym import error, spaces, utils
