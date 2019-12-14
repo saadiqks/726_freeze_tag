@@ -46,7 +46,7 @@ class FreezeTagEnv(gym.Env):
 
         radius = self.radius
 
-        self.penalty = 1000
+        self.penalty = -1000
 
         # Render agents and tagger
         if self.viewer is None:
