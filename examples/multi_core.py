@@ -45,7 +45,8 @@ class MultiAgentFramework(object):
 				raise ValueError(
 					'action_repetition must be >= 1, is {}'.format(action_repetition))
 
-		self.training = True
+		self.dqagents[0].training = True
+		self.dqagents[1].training = True
 
 		callbacks = [] if not callbacks else callbacks[:]
 
@@ -187,13 +188,15 @@ class MultiAgentFramework(object):
 					'hider_metrics': hider_metrics,
 					'seeker_reward': seeker_reward,
 					'metrics': seeker_metrics,
-					'reward': rewards,
+					'reward': seeker_reward,
 					'episode': episode,
 					'info': accumulated_info,
 				}
 				callbacks.on_step_end(episode_step, step_logs)
 				episode_step += 1
 				self.step += 1
+				self.dqagents[0].step += 1
+				self.dqagents[1].step += 1
 
 				if done:
 					# We are in a terminal state but the agent hasn't yet seen it. We therefore
@@ -227,7 +230,7 @@ class MultiAgentFramework(object):
 			# This is so common that we've built this right into this function, which ensures that
 			# the `on_train_end` method is properly called.
 			did_abort = True
-		callbacks.on_train_end(logs={'did_abort': did_abort})
+		# callbacks.on_train_end(logs={'did_abort': did_abort})
 		self._on_train_end()
 
 		return history
@@ -270,8 +273,10 @@ class MultiAgentFramework(object):
 				raise ValueError(
 					'action_repetition must be >= 1, is {}'.format(action_repetition))
 
-		self.training = False
-		self.step = 0
+		self.dqagents[0].training = False
+		self.dqagents[1].training = False
+		self.dqagents[0].step = 0
+		self.dqagents[1].step = 0
 
 		callbacks = [] if not callbacks else callbacks[:]
 
@@ -357,7 +362,7 @@ class MultiAgentFramework(object):
 				seeker_reward = np.float32(0)
 				accumulated_info = {}
 				for _ in range(action_repetition):
-					callbacks.on_action_begin(action)
+					# callbacks.on_action_begin(action)
 					observations, rs, d, info = env.step(actions)
 					observations = deepcopy(observations)
 					if self.processor is not None:
@@ -392,6 +397,8 @@ class MultiAgentFramework(object):
 				callbacks.on_step_end(episode_step, step_logs)
 				episode_step += 1
 				self.step += 1
+				self.dqagents[0].step += 1
+				self.dqagents[1].step += 1
 
 			# We are in a terminal state but the agent hasn't yet seen it. We therefore
 			# perform one more forward-backward call and simply ignore the action before
@@ -411,8 +418,8 @@ class MultiAgentFramework(object):
 				'episode_reward': episode_reward,
 				'nb_steps': episode_step,
 			}
-			callbacks.on_episode_end(episode, episode_logs)
-		callbacks.on_train_end()
+			# callbacks.on_episode_end(episode, episode_logs)
+		# callbacks.on_train_end()
 		self._on_test_end()
 
 		return history

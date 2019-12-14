@@ -11,7 +11,7 @@ from keras.optimizers import Adam
 import keras.backend as K
 
 from dqn import DQNAgent
-from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
+from policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.memory import SequentialMemory
 from multi_core import MultiProcessor, MultiAgentFramework
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
@@ -102,7 +102,7 @@ processor = AtariProcessor()
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
 policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
-                              nb_steps=1000000)
+                              nb_steps=50000)
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
@@ -131,7 +131,7 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     #callbacks += [FileLogger(log_filename, interval=100)]
-    framework.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
+    framework.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000,visualize=False)
 
     # After training is done, we save the final weights one more time.
     framework.save_weights(weights_filename, overwrite=True)
