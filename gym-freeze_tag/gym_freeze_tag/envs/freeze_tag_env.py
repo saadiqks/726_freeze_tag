@@ -121,13 +121,17 @@ class FreezeTagEnv(gym.Env):
                 a = action[j]
 
                 if a == 0:
-                    state[i + 1] += MOVEMENT # y coord increases 
+                    if state[i + 1] + MOVEMENT < 1000:
+                        state[i + 1] += MOVEMENT # y coord increases 
                 elif a == 1:
-                    state[i] += MOVEMENT # x coord increases 
+                    if state[i] + MOVEMENT < 1000:
+                        state[i] += MOVEMENT # x coord increases 
                 elif a == 2:
-                    state[i + 1] -= MOVEMENT # y coord decreases 
+                    if state[i + 1] - MOVEMENT > 0:
+                        state[i + 1] -= MOVEMENT # y coord decreases 
                 elif a == 3:
-                    state[i] -= MOVEMENT # x coord decreases 
+                    if state[i] - MOVEMENT > 0:
+                        state[i] -= MOVEMENT # x coord decreases 
 
         done = False
 
