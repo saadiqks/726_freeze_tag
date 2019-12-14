@@ -214,8 +214,9 @@ class MultiAgentFramework(object):
 						'episode_reward': episode_reward,
 						'nb_episode_steps': episode_step,
 						'nb_steps': self.step,
+						'epoch': 1
 					}
-					callbacks.on_episode_end(episode, episode_logs)
+					# callbacks.on_episode_end(episode, episode_logs)
 
 					episode += 1
 					observations = []

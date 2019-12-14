@@ -236,11 +236,15 @@ class DQNAgent(AbstractDQNAgent):
         self.recent_observations.append(observation)
         self.recent_actions.append(action)
 
+        if len(self.recent_observations) > 60000:
+            self.recent_observations = []
+            self.recent_actions = []
+
         return action
 
     def backward(self, reward, terminal):
         # Store most recent experiences in memory.
-        for i,recent_observation in enumerate(self.recent_observations)
+        for i,recent_observation in enumerate(self.recent_observations):
             if self.step % self.memory_interval == 0:
                 self.memory.append(recent_observation, self.recent_actions[i], reward, terminal,
                                training=self.training)

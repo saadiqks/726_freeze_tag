@@ -10,7 +10,7 @@ from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute
 from keras.optimizers import Adam
 import keras.backend as K
 
-from rl.agents.dqn import DQNAgent
+from dqn import DQNAgent
 from rl.policy import LinearAnnealedPolicy, BoltzmannQPolicy, EpsGreedyQPolicy
 from rl.memory import SequentialMemory
 from multi_core import MultiProcessor, MultiAgentFramework
@@ -52,33 +52,48 @@ np.random.seed(123)
 env.seed(123)
 nb_actions = env.action_space.n
 
-# Next, we build our model. We use the same model that was described by Mnih et al. (2015).
-input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
-model = Sequential()
-if K.image_data_format() == 'channels_last':
-    # (width, height, channels)
-    model.add(Permute((2, 3, 1), input_shape=input_shape))
-elif K.image_data_format() == 'channels_first':
-    # (channels, width, height)
-    model.add(Permute((1, 2, 3), input_shape=input_shape))
-else:
-    raise RuntimeError('Unknown image_dim_ordering.')
-model.add(Convolution2D(32, (8, 8), strides=(4, 4)))
-model.add(Activation('relu'))
-model.add(Convolution2D(64, (4, 4), strides=(2, 2)))
-model.add(Activation('relu'))
-model.add(Convolution2D(64, (3, 3), strides=(1, 1)))
-model.add(Activation('relu'))
-model.add(Flatten())
-model.add(Dense(512))
-model.add(Activation('relu'))
-model.add(Dense(nb_actions))
-model.add(Activation('linear'))
-print(model.summary())
+# Next, we build our hider_model. We use the same hider_model that was described by Mnih et al. (2015).
+hider_model = Sequential()
+hider_model.add(Flatten(input_shape=(1,) + (18,)))
+# hider_model.add(Convolution2D(32, (8, 8), strides=(4, 4)))
+# hider_model.add(Activation('relu'))
+# hider_model.add(Convolution2D(64, (4, 4), strides=(2, 2)))
+# hider_model.add(Activation('relu'))
+# hider_model.add(Convolution2D(64, (3, 3), strides=(1, 1)))
+# hider_model.add(Activation('relu'))
+# hider_model.add(Flatten())
+hider_model.add(Dense(512))
+hider_model.add(Activation('relu'))
+hider_model.add(Dense(512))
+hider_model.add(Activation('relu'))
+hider_model.add(Dense(512))
+hider_model.add(Activation('relu'))
+hider_model.add(Dense(nb_actions))
+hider_model.add(Activation('linear'))
+print(hider_model.summary())
+
+seeker_model = Sequential()
+seeker_model.add(Flatten(input_shape=(1,) + (18,)))
+# seeker_model.add(Convolution2D(32, (8, 8), strides=(4, 4)))
+# seeker_model.add(Activation('relu'))
+# seeker_model.add(Convolution2D(64, (4, 4), strides=(2, 2)))
+# seeker_model.add(Activation('relu'))
+# seeker_model.add(Convolution2D(64, (3, 3), strides=(1, 1)))
+# seeker_model.add(Activation('relu'))
+# seeker_model.add(Flatten())
+seeker_model.add(Dense(512))
+seeker_model.add(Activation('relu'))
+seeker_model.add(Dense(512))
+seeker_model.add(Activation('relu'))
+seeker_model.add(Dense(512))
+seeker_model.add(Activation('relu'))
+seeker_model.add(Dense(nb_actions))
+seeker_model.add(Activation('linear'))
+print(seeker_model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
-memory = SequentialMemory(limit=1000000, window_length=WINDOW_LENGTH)
+memory = SequentialMemory(limit=1000000, window_length=1)
 processor = AtariProcessor()
 
 # Select a policy. We use eps-greedy action selection, which means that a random action is selected
@@ -96,17 +111,17 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # Feel free to give it a try!
 
 # creating both agents
-hider_dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
-               train_interval=4, delta_clip=1.)
+hider_dqn = DQNAgent(model=hider_model, nb_actions=nb_actions, policy=policy, memory=memory,
+               nb_steps_warmup=100, gamma=.99, target_model_update=10,
+               train_interval=2, delta_clip=1.)
 hider_dqn.compile(Adam(lr=.00025), metrics=['mae'])
-seeker_dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
-               processor=processor, nb_steps_warmup=50000, gamma=.99, target_model_update=10000,
-               train_interval=4, delta_clip=1.)
+seeker_dqn = DQNAgent(model=seeker_model, nb_actions=nb_actions, policy=policy, memory=memory,
+               nb_steps_warmup=100, gamma=.99, target_model_update=10,
+               train_interval=2, delta_clip=1.)
 seeker_dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
 # passing both agents to framework
-framework = MultiAgentFramework(dqagents=[hider_dqn,seeker_dqn], processor=processor)
+framework = MultiAgentFramework(dqagents=[hider_dqn,seeker_dqn])
 
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
